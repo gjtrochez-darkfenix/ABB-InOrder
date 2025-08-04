@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recorrido InOrden - ABB</title>
+    <style>
+        .tree-container {
+            position: relative;
+            height: 400px;
+            margin: 20px auto;
+            width: 800px;
+        }
+
+        .node {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #3498db;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            transition: all 0.5s ease;
+            box-shadow: 0 0 8px rgba(0,0,0,0.3);
+            z-index: 2;
+        }
+
+        .visited {
+            background-color: #2ecc71 !important;
+            transform: scale(1.1);
+        }
+
+        .current {
+            background-color: #e74c3c !important;
+            box-shadow: 0 0 15px #e74c3c;
+            animation: pulse 1s infinite;
+        }
+
+        .line {
+            position: absolute;
+            background-color: #7f8c8d;
+            z-index: 1;
+            transform-origin: top left;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #1a252f;
+        }
+
+        #sequence {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px;
+            text-align: center;
+            min-height: 40px;
+            color: #2c3e50;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center; color: #2c3e50;">Recorrido InOrden - ABB</h1>
+    
+    <div class="tree-container" id="tree"></div>
+    
+    <div id="sequence">Secuencia: </div>
+    
+    <div class="controls">
+        <button id="startBtn">Iniciar Animación</button>
+        <button id="stepBtn">Siguiente Paso</button>
+        <button id="resetBtn">Reiniciar</button>
+    </div>
+
+    <script>
+        // Estructura del árbol binario
+        const tree = {
+            value: 20,
+            left: {
+                value: 10,
+                left: { value: 5, left: null, right: null },
+                right: { value: 15, left: null, right: null }
+            },
+            right: {
+                value: 30,
+                left: { value: 25, left: null, right: null },
+                right: { value: 35, left: null, right: null }
+            }
+        };
+
+        // Posiciones de los nodos [x, y, nivel]
+        const nodePositions = {
+            20: [400, 50, 0],
+            10: [250, 150, 1],
+            30: [550, 150, 1],
+            5: [180, 250, 2],
+            15: [320, 250, 2],
+            25: [480, 250, 2],
+            35: [620, 250, 2]
+        };
+
+        // Secuencia de recorrido inOrden
+        let traversalSequence = [];
+        let currentStep = 0;
+        let animationInterval = null;
+
+        // Función para recorrer el árbol inOrden y crear la secuencia
+        function inOrderTraversal(node) {
+            if (node) {
+                inOrderTraversal(node.left);
+                traversalSequence.push(node.value);
+                inOrderTraversal(node.right);
+            }
+        }
+
+        // Crear elementos visuales del árbol
+        function createTreeVisual() {
+            const treeContainer = document.getElementById('tree');
+            
+            // Crear nodos
+            Object.keys(nodePositions).forEach(value => {
+                const [x, y] = nodePositions[value];
+                const node = document.createElement('div');
+                node.className = 'node';
+                node.id = `node-${value}`;
+                node.textContent = value;
+                node.style.left = `${x}px`;
+                node.style.top = `${y}px`;
+                treeContainer.appendChild(node);
+            });
+
+            // Crear líneas (conexiones)
+            createLine(20, 10);
+            createLine(20, 30);
+            createLine(10, 5);
+            createLine(10, 15);
+            createLine(30, 25);
+            createLine(30, 35);
+        }
+
+        // Crear línea entre nodos
+        function createLine(parentValue, childValue) {
+            const treeContainer = document.getElementById('tree');
+            const parentPos = nodePositions[parentValue];
+            const childPos = nodePositions[childValue];
+            
+            const x1 = parentPos[0] + 25;
+            const y1 = parentPos[1] + 25;
+            const x2 = childPos[0] + 25;
+            const y2 = childPos[1] + 25;
+            
+            // Calcular longitud y ángulo
+            const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+            
+            const line = document.createElement('div');
+            line.className = 'line';
+            line.style.width = `${length}px`;
+            line.style.height = '3px';
+            line.style.left = `${x1}px`;
+            line.style.top = `${y1}px`;
+            line.style.transform = `rotate(${angle}deg)`;
+            
+            treeContainer.appendChild(line);
+        }
+
+        // Ejecutar un paso de la animación
+        function performStep() {
+            if (currentStep < traversalSequence.length) {
+                // Resetear todos los nodos
+                document.querySelectorAll('.node').forEach(node => {
+                    node.classList.remove('current');
+                });
+                
+                // Resaltar nodo actual
+                const currentValue = traversalSequence[currentStep];
+                const currentNode = document.getElementById(`node-${currentValue}`);
+                currentNode.classList.add('current');
+                
+                // Actualizar secuencia
+                const sequenceElement = document.getElementById('sequence');
+                sequenceElement.textContent += 
+                    (currentStep > 0 ? ' → ' : 'Secuencia: ') + currentValue;
+                
+                // Marcar nodo como visitado después de un breve retraso
+                setTimeout(() => {
+                    currentNode.classList.add('visited');
+                    currentNode.classList.remove('current');
+                }, 800);
+                
+                currentStep++;
+            } else {
+                clearInterval(animationInterval);
+            }
+        }
+
+        // Reiniciar animación
+        function resetAnimation() {
+            clearInterval(animationInterval);
+            currentStep = 0;
+            document.querySelectorAll('.node').forEach(node => {
+                node.classList.remove('visited', 'current');
+            });
+            document.getElementById('sequence').textContent = 'Secuencia: ';
+        }
+
+        // Eventos al cargar la página
+        window.onload = function() {
+            // Generar secuencia de recorrido
+            inOrderTraversal(tree);
+            
+            // Crear visualización del árbol
+            createTreeVisual();
+            
+            // Configurar botones
+            document.getElementById('startBtn').addEventListener('click', function() {
+                resetAnimation();
+                animationInterval = setInterval(performStep, 1200);
+            });
+            
+            document.getElementById('stepBtn').addEventListener('click', function() {
+                if (currentStep === 0) resetAnimation();
+                performStep();
+            });
+            
+            document.getElementById('resetBtn').addEventListener('click', resetAnimation);
+        };
+    </script>
+</body>
+</html>
